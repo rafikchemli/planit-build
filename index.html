@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Production Build Scope Configurator</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --text: #111827;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-soft: #eff6ff;
+    --must: #059669;
+    --must-bg: #ecfdf5;
+    --nice: #d97706;
+    --nice-bg: #fffbeb;
+    --planit: #6b7280;
+    --planit-bg: #f3f4f6;
+    --advanced: #7c3aed;
+    --advanced-bg: #f5f3ff;
+    --flag: #dc2626;
+    --flag-bg: #fee2e2;
+    --highlight: #fef3c7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    font-size: 14px;
+  }
+  header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 24px 32px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  header p {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 24px;
+    padding: 24px 32px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1024px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { position: static !important; }
+  }
+
+  .presets {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .presets button {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .presets button:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .presets button.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  .presets .clear {
+    margin-left: auto;
+  }
+  .preset-info {
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 16px;
+    padding: 8px 12px;
+    background: var(--accent-soft);
+    border-radius: 6px;
+    border-left: 3px solid var(--accent);
+  }
+
+  .section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: #fafbfc;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+  .section-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .section-meta {
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .section-meta strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .items {
+    padding: 0;
+  }
+  .item {
+    display: grid;
+    grid-template-columns: 32px 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  .item:last-child { border-bottom: none; }
+  .item:hover { background: #fafbfc; }
+  .item.selected { background: var(--accent-soft); }
+  .item.flagged { background: var(--flag-bg); }
+  .item.flagged.selected { background: linear-gradient(to right, var(--flag-bg), var(--accent-soft)); }
+  .item.planit { opacity: 0.7; }
+
+  .item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+  .item input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  .item-content {
+    min-width: 0;
+  }
+  .item-name {
+    font-weight: 500;
+    font-size: 13px;
+    margin-bottom: 2px;
+  }
+  .item-recommendation {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .item-recommendation.flag-text {
+    color: var(--flag);
+    font-weight: 500;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .badge.must { background: var(--must-bg); color: var(--must); }
+  .badge.nice { background: var(--nice-bg); color: var(--nice); }
+  .badge.planit { background: var(--planit-bg); color: var(--planit); }
+  .badge.advanced { background: var(--advanced-bg); color: var(--advanced); }
+  .item-hours {
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    font-size: 12px;
+    min-width: 38px;
+    text-align: right;
+  }
+  .item-hours strong { color: var(--text); }
+
+  aside {
+    position: sticky;
+    top: 90px;
+    height: fit-content;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+  aside h2 {
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+  .sow-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+  }
+  .sow-table th, .sow-table td {
+    text-align: left;
+    padding: 8px 4px;
+    font-size: 13px;
+  }
+  .sow-table th {
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sow-table th:nth-child(2),
+  .sow-table th:nth-child(3),
+  .sow-table td:nth-child(2),
+  .sow-table td:nth-child(3) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .sow-table tr.subtotal td {
+    border-top: 1px solid var(--border);
+    font-weight: 600;
+    background: #fafbfc;
+  }
+  .sow-table tr.discount td {
+    color: var(--accent);
+  }
+  .sow-table tr.total td {
+    border-top: 2px solid var(--text);
+    font-weight: 700;
+    font-size: 15px;
+    padding-top: 10px;
+  }
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .meta-row strong { color: var(--text); }
+
+  .export-btn {
+    width: 100%;
+    margin-top: 16px;
+    padding: 10px 16px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.15s;
+  }
+  .export-btn:hover { background: #1d4ed8; }
+  .export-btn:disabled {
+    background: var(--border);
+    cursor: not-allowed;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Production Build Scope Configurator</h1>
+  <p>Toggle sub-deliverables to build a custom SOW. Pricing updates live.</p>
+</header>
+
+<main class="layout">
+  <section class="config-area">
+    <div class="presets">
+      <button data-preset="lite">Must-Have Only (Lite)</button>
+      <button data-preset="steering">Steering Docs (Old Opt 2)</button>
+      <button data-preset="react">Full React Chat</button>
+      <button data-preset="ontology">Schema-Aware Ontology (Old Opt 1)</button>
+      <button data-preset="all">All In</button>
+      <button data-preset="clear" class="clear">Clear All</button>
+    </div>
+    <div class="preset-info" id="preset-info">Click a preset above or check items individually.</div>
+
+    <div id="sections-container"></div>
+  </section>
+
+  <aside>
+    <h2>SOW Pricing</h2>
+    <table class="sow-table">
+      <thead>
+        <tr><th>Resource</th><th>Hrs</th><th>Cost</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Blended Team</td><td id="total-hrs">0</td><td id="subtotal">$0</td></tr>
+        <tr class="subtotal"><td>Sub Totals</td><td id="total-hrs-2">0</td><td id="subtotal-2">$0</td></tr>
+        <tr class="discount"><td>AWS Funding (upon approval)</td><td></td><td id="discount-cell">($42,100)</td></tr>
+        <tr class="total"><td>Total</td><td></td><td id="net">$0</td></tr>
+      </tbody>
+    </table>
+    <div class="meta-row"><span>Working hours</span><strong id="working-hrs">0</strong></div>
+    <div class="meta-row"><span>Blended rate</span><strong>$200.58 /hr</strong></div>
+    <div class="meta-row"><span>Duration</span><strong id="duration">0 wks</strong></div>
+    <div class="meta-row"><span>Items selected</span><strong id="items-count">0 / 28</strong></div>
+
+    <button class="export-btn" id="export-btn">Download Excel</button>
+  </aside>
+</main>
+
+<script>
+const ITEMS = [
+  { section: '1. Frontend Integration & UI Development', name: 'Install and Configure the Client', label: 'must', hours: 8, recommendation: 'Wire Chainlit react-client into Planit shell.' },
+  { section: '1. Frontend Integration & UI Development', name: 'Build Chat Components', label: 'must', hours: 8, recommendation: 'Under Chainlit MVP this is theming, not custom components.' },
+  { section: '1. Frontend Integration & UI Development', name: 'Handle Complex Payloads', label: 'must', hours: 16, recommendation: 'Use Chainlit Element API for table, markdown, CSV download.' },
+  { section: '1. Frontend Integration & UI Development', name: 'State & History Management', label: 'must', hours: 8, recommendation: 'Bind Chainlit thread state to OneLogin user.' },
+  { section: '1. Frontend Integration & UI Development', name: 'Mid-Task Input Handling', label: 'nice', hours: 16, recommendation: 'Recommend keeping in scope; clarification loops materially improve agent accuracy.' },
+  { section: '1. Frontend Integration & UI Development', name: '"Thinking" Indicators', label: 'nice', hours: 8, recommendation: 'Chainlit Steps API gives most of this for free.' },
+  { section: '1. Frontend Integration & UI Development', name: 'Full React Chat Rebuild Premium', label: 'advanced', hours: 33, recommendation: 'Replaces Chainlit MVP with a custom React chat. Adds incremental engineering on top of the Must-Have Section 1 items. Beyond xlsx MVP scope.' },
+
+  { section: '2. Security, Identity, & Tenant Isolation', name: 'Auth Handoff', label: 'must', hours: 8, recommendation: 'OneLogin JWT to chainlit react-client init.' },
+  { section: '2. Security, Identity, & Tenant Isolation', name: 'Token Decoding & Identity Mapping', label: 'nice', hours: 12, recommendation: 'Required if multi-tenant.' },
+  { section: '2. Security, Identity, & Tenant Isolation', name: 'Prompt/Context Injection', label: 'nice', hours: 16, recommendation: 'FLAG: should be Must-Have. Without it any authenticated user can read all tenants data.', flag: true },
+  { section: '2. Security, Identity, & Tenant Isolation', name: 'Database Service Account Lockdown', label: 'planit', hours: 0, recommendation: 'Owned by Planit (read replica). No SOW hours.' },
+
+  { section: '3. Ontological Sorting & Semantic Architecture', name: 'Concept Mapping & Synonym Libraries', label: 'must', hours: 16, recommendation: 'Steering docs + synonym table. No knowledge graph per client note.' },
+  { section: '3. Ontological Sorting & Semantic Architecture', name: 'Entity Resolution & Hierarchy Linking', label: 'must', hours: 12, recommendation: 'Hierarchy lookup tables (SKU to Style-Color to Style).' },
+  { section: '3. Ontological Sorting & Semantic Architecture', name: 'Cross-Domain Relationship Mapping', label: 'must', hours: 12, recommendation: 'Map RAG phrases to SQL columns (e.g. lead times to LeadTime, prodLT).' },
+  { section: '3. Ontological Sorting & Semantic Architecture', name: 'State & Status Taxonomies', label: 'must', hours: 8, recommendation: 'Lifecycle state to flag mappings (Active, Closeout, Offline).' },
+  { section: '3. Ontological Sorting & Semantic Architecture', name: 'Schema-Aware Retrieval (GraphRAG)', label: 'advanced', hours: 124, recommendation: 'Optional advanced retrieval over a schema graph. Old Option 1 equivalent. The xlsx note explicitly rules out a knowledge graph for MVP, so include this only if the client revises that position.' },
+
+  { section: '4. Agentic Orchestration, SQL Guardrails & Execution', name: 'Intent Triage & Clarification Thresholds', label: 'must', hours: 16, recommendation: 'Logic gate before SQL or RAG.' },
+  { section: '4. Agentic Orchestration, SQL Guardrails & Execution', name: 'Proactively Troubleshoot', label: 'must', hours: 24, recommendation: 'LangChain Retrieve-Reason-Act-Synthesize loop.' },
+  { section: '4. Agentic Orchestration, SQL Guardrails & Execution', name: 'Avoid Infinite Loops', label: 'must', hours: 8, recommendation: 'max_iterations safeguard, graceful failover.' },
+  { section: '4. Agentic Orchestration, SQL Guardrails & Execution', name: 'Schema & Metric Bounding', label: 'must', hours: 12, recommendation: 'Restrict agent to curated schemas only.' },
+  { section: '4. Agentic Orchestration, SQL Guardrails & Execution', name: 'Semantic Pre-Execution Validation', label: 'must', hours: 16, recommendation: 'SQL parser layer. Block cross joins, enforce LIMIT.' },
+  { section: '4. Agentic Orchestration, SQL Guardrails & Execution', name: 'Error Handling Loop', label: 'must', hours: 12, recommendation: 'Read DB error, rewrite, retry under the hood.' },
+
+  { section: '5. Productionalizing the RAG Pipeline', name: 'Automated Ingestion', label: 'must', hours: 16, recommendation: 'Slack or S3 scraper. CONFIRM: deduct 16h if already built.' },
+  { section: '5. Productionalizing the RAG Pipeline', name: 'Chunking & Vectorization', label: 'must', hours: 12, recommendation: 'Titan to OpenSearch. CONFIRM: deduct 12h if already built.' },
+  { section: '5. Productionalizing the RAG Pipeline', name: 'Versioning & Purging', label: 'must', hours: 16, recommendation: 'Detect updates, replace or purge vectors.' },
+  { section: '5. Productionalizing the RAG Pipeline', name: 'Citation Formatting', label: 'nice', hours: 8, recommendation: 'FLAG: should be Must-Have for compliance and trust.', flag: true },
+
+  { section: '6. LLMOps, Observability, & Quality Tuning', name: 'Telemetry Integration', label: 'must', hours: 12, recommendation: 'Log prompt, RAG context, SQL, time, tokens.' },
+  { section: '6. LLMOps, Observability, & Quality Tuning', name: 'User Feedback Mechanism', label: 'must', hours: 8, recommendation: 'Thumbs up/down + Report Issue, route to dashboard.' },
+  { section: '6. LLMOps, Observability, & Quality Tuning', name: 'Cost Monitoring', label: 'planit', hours: 0, recommendation: 'Owned by Planit. No SOW hours.' },
+  { section: '6. LLMOps, Observability, & Quality Tuning', name: 'Documentation', label: 'must', hours: 24, recommendation: 'Runbooks, architecture diagrams, Terraform/CFN.' }
+];
+
+const BLENDED_RATE = 200.58;
+const DISCOUNT = 42100;
+const MIX = { principal: 0.043478, sa: 0.289855, de: 0.579710, pm: 0.086957 };
+const SELECTABLE = ITEMS.filter(i => i.label !== 'planit').length;
+
+const STD_NICE = ['Mid-Task Input Handling','Token Decoding & Identity Mapping','Prompt/Context Injection','Citation Formatting'];
+const PRESETS = {
+  lite:     { label: 'Must-Have Only (Lite)', filter: i => i.label === 'must' },
+  steering: { label: 'Steering Docs (Old Opt 2)', filter: i => i.label === 'must' || STD_NICE.includes(i.name) },
+  react:    { label: 'Full React Chat', filter: i => i.label === 'must' || STD_NICE.includes(i.name) || i.name === 'Full React Chat Rebuild Premium' },
+  ontology: { label: 'Schema-Aware Ontology (Old Opt 1)', filter: i => i.label === 'must' || STD_NICE.includes(i.name) || i.name === 'Schema-Aware Retrieval (GraphRAG)' },
+  all:      { label: 'All In', filter: i => i.label !== 'planit' },
+  clear:    { label: 'Cleared', filter: () => false }
+};
+
+const state = {
+  selected: new Set(),
+  preset: null
+};
+
+function render() {
+  const container = document.getElementById('sections-container');
+  container.innerHTML = '';
+  const sections = [...new Set(ITEMS.map(i => i.section))];
+
+  for (const section of sections) {
+    const items = ITEMS.filter(i => i.section === section);
+    const totalHrs = items.reduce((s, i) => s + i.hours, 0);
+    const selectedHrs = items.reduce((s, i, idx) => {
+      const globalIdx = ITEMS.indexOf(i);
+      return s + (state.selected.has(globalIdx) ? i.hours : 0);
+    }, 0);
+
+    const div = document.createElement('div');
+    div.className = 'section';
+    div.innerHTML = `
+      <div class="section-header">
+        <h3>${section}</h3>
+        <span class="section-meta"><strong>${selectedHrs}h</strong> of ${totalHrs}h selected</span>
+      </div>
+      <div class="items"></div>
+    `;
+    const itemsDiv = div.querySelector('.items');
+    for (const item of items) {
+      const idx = ITEMS.indexOf(item);
+      const isSelected = state.selected.has(idx);
+      const isPlanit = item.label === 'planit';
+      const labelText = item.label === 'must' ? 'Must-Have' : item.label === 'nice' ? 'Nice-to-Have' : 'Planit-Owned';
+      const itemEl = document.createElement('div');
+      itemEl.className = `item${isSelected ? ' selected' : ''}${item.flag ? ' flagged' : ''}${isPlanit ? ' planit' : ''}`;
+      itemEl.innerHTML = `
+        <input type="checkbox" data-idx="${idx}" ${isSelected ? 'checked' : ''} ${isPlanit ? 'disabled' : ''}>
+        <div class="item-content">
+          <div class="item-name">${item.name}</div>
+          <div class="item-recommendation${item.flag ? ' flag-text' : ''}">${item.recommendation}</div>
+        </div>
+        <span class="badge ${item.label}">${labelText}</span>
+        <span class="item-hours"><strong>${item.hours}</strong>h</span>
+      `;
+      itemsDiv.appendChild(itemEl);
+    }
+    container.appendChild(div);
+  }
+
+  document.querySelectorAll('input[type="checkbox"][data-idx]').forEach(cb => {
+    cb.addEventListener('change', e => {
+      const idx = parseInt(e.target.dataset.idx);
+      if (e.target.checked) state.selected.add(idx);
+      else state.selected.delete(idx);
+      state.preset = null;
+      render();
+      updateTotals();
+      updatePresetButtons();
+    });
+  });
+}
+
+function updateTotals() {
+  const workingHrs = [...state.selected].reduce((s, idx) => s + ITEMS[idx].hours, 0);
+  const totalHrs = workingHrs > 0 ? Math.ceil(workingHrs / (1 - MIX.principal - MIX.pm)) : 0;
+  const subtotalRaw = totalHrs * BLENDED_RATE;
+  const subtotal = Math.ceil(subtotalRaw / 100) * 100;
+  const net = subtotal - DISCOUNT;
+  const durationWks = Math.ceil(workingHrs * MIX.de / 40);
+
+  document.getElementById('working-hrs').textContent = workingHrs;
+  document.getElementById('total-hrs').textContent = totalHrs;
+  document.getElementById('total-hrs-2').textContent = totalHrs;
+  document.getElementById('subtotal').textContent = '$' + subtotal.toLocaleString();
+  document.getElementById('subtotal-2').textContent = '$' + subtotal.toLocaleString();
+  document.getElementById('net').textContent = (net < 0 ? '-' : '') + '$' + Math.abs(net).toLocaleString();
+  document.getElementById('duration').textContent = durationWks + ' ' + (durationWks === 1 ? 'wk' : 'wks');
+  document.getElementById('items-count').textContent = state.selected.size + ' / ' + SELECTABLE;
+  document.getElementById('export-btn').disabled = state.selected.size === 0;
+}
+
+function applyPreset(key) {
+  state.selected.clear();
+  const filter = PRESETS[key].filter;
+  ITEMS.forEach((item, idx) => {
+    if (filter(item)) state.selected.add(idx);
+  });
+  state.preset = key;
+  render();
+  updateTotals();
+  updatePresetButtons();
+  updatePresetInfo();
+}
+
+function updatePresetButtons() {
+  document.querySelectorAll('.presets button[data-preset]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.preset === state.preset);
+  });
+}
+
+function updatePresetInfo() {
+  const info = document.getElementById('preset-info');
+  if (state.preset) {
+    const labels = {
+      lite: 'Must-Have items only. Minimum production-ready scope. Skips two items (Prompt Injection, Citation Formatting) that production users will likely flag as missing.',
+      steering: 'Old Option 2 equivalent. Must-Have plus four key Nice-to-Haves promoted to scope: Mid-Task Input, Token Decoding, Prompt Injection (security), Citation Formatting (compliance). Chainlit MVP frontend.',
+      react: 'Steering Docs scope plus Full React Chat Rebuild Premium. Replaces Chainlit MVP with a custom React chat. Use when the client wants a fully native UI.',
+      ontology: 'Old Option 1 equivalent. Steering Docs scope plus Schema-Aware Retrieval (GraphRAG). NOTE: xlsx scope note explicitly rules out a knowledge graph build, so include only if the client revises that position.',
+      all: 'Everything selectable: Must-Have, all Nice-to-Have including Thinking Indicators, plus both advanced add-ons (Full React Rebuild and GraphRAG).',
+      clear: 'No items selected. Pick a preset or check items individually.'
+    };
+    info.textContent = labels[state.preset];
+  } else if (state.selected.size > 0) {
+    info.textContent = 'Custom selection. ' + state.selected.size + ' item(s) selected.';
+  } else {
+    info.textContent = 'Click a preset above or check items individually.';
+  }
+}
+
+document.querySelectorAll('.presets button[data-preset]').forEach(btn => {
+  btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+});
+
+function exportToExcel() {
+  const selected = [...state.selected].map(i => ITEMS[i]);
+  const workingHrs = selected.reduce((s, i) => s + i.hours, 0);
+  const totalHrs = workingHrs > 0 ? Math.ceil(workingHrs / (1 - MIX.principal - MIX.pm)) : 0;
+  const subtotal = workingHrs > 0 ? Math.ceil(totalHrs * BLENDED_RATE / 100) * 100 : 0;
+  const net = subtotal - DISCOUNT;
+  const durationWks = Math.ceil(workingHrs * MIX.de / 40);
+  const presetLabel = state.preset ? PRESETS[state.preset].label : 'Custom Selection';
+
+  // Sheet 1: SOW Summary in the Resource/Hours/Cost format
+  const sowData = [
+    ['Production Build SOW'],
+    ['Preset', presetLabel],
+    ['Generated', new Date().toISOString().slice(0, 10)],
+    [],
+    ['Resource', 'Est. Hours', 'Cost (USD)'],
+    ['Blended Team', totalHrs, subtotal],
+    ['Sub Totals', totalHrs, subtotal],
+    ['AWS Funding (upon approval)', '', -DISCOUNT],
+    ['Total', '', net],
+    [],
+    ['Working hours', workingHrs],
+    ['Blended rate (USD/hr)', BLENDED_RATE],
+    ['Duration (weeks)', durationWks],
+    ['Items selected', selected.length + ' / ' + SELECTABLE],
+  ];
+  const sowSheet = XLSX.utils.aoa_to_sheet(sowData);
+  sowSheet['!cols'] = [{ wch: 30 }, { wch: 16 }, { wch: 16 }];
+  // Currency format on cost column rows 6, 7, 8, 9
+  ['C6','C7','C8','C9'].forEach(cell => {
+    if (sowSheet[cell] && typeof sowSheet[cell].v === 'number') {
+      sowSheet[cell].z = '"$"#,##0;[Red]("$"#,##0)';
+    }
+  });
+  // Currency format on blended rate
+  if (sowSheet['B12']) sowSheet['B12'].z = '"$"#,##0.00';
+
+  // Sheet 2: Selected items by section
+  const itemsData = [
+    ['Section', 'Sub-Deliverable', 'Label', 'Hours', 'Recommendation'],
+  ];
+  const sections = [...new Set(selected.map(i => i.section))];
+  for (const sec of sections) {
+    selected.filter(i => i.section === sec).forEach(i => {
+      const labelText = i.label === 'must' ? 'Must-Have' :
+                       i.label === 'nice' ? 'Nice-to-Have' :
+                       i.label === 'advanced' ? 'Advanced / Optional' : 'Planit-Owned';
+      itemsData.push([sec, i.name, labelText, i.hours, i.recommendation]);
+    });
+  }
+  itemsData.push([]);
+  itemsData.push(['', '', 'TOTAL working hours', workingHrs, '']);
+  const itemsSheet = XLSX.utils.aoa_to_sheet(itemsData);
+  itemsSheet['!cols'] = [{ wch: 50 }, { wch: 36 }, { wch: 18 }, { wch: 8 }, { wch: 60 }];
+
+  // Build workbook and download
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, sowSheet, 'SOW Summary');
+  XLSX.utils.book_append_sheet(wb, itemsSheet, 'Selected Items');
+
+  const safePreset = presetLabel.replace(/[^a-zA-Z0-9]+/g, '_').toLowerCase();
+  const filename = `planit_sow_${safePreset}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, filename);
+}
+
+document.getElementById('export-btn').addEventListener('click', exportToExcel);
+
+// Initial render with Steering Docs (old Opt 2) preset selected
+applyPreset('steering');
+</script>
+
+</body>
+</html>
