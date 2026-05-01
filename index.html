@@ -18,8 +18,6 @@
     --must-bg: #ecfdf5;
     --nice: #d97706;
     --nice-bg: #fffbeb;
-    --planit: #6b7280;
-    --planit-bg: #f3f4f6;
     --advanced: #7c3aed;
     --advanced-bg: #f5f3ff;
     --flag: #dc2626;
@@ -150,17 +148,12 @@
   .item.selected { background: var(--accent-soft); }
   .item.flagged { background: var(--flag-bg); }
   .item.flagged.selected { background: linear-gradient(to right, var(--flag-bg), var(--accent-soft)); }
-  .item.planit { opacity: 0.7; }
 
   .item input[type="checkbox"] {
     width: 18px;
     height: 18px;
     cursor: pointer;
     accent-color: var(--accent);
-  }
-  .item input[type="checkbox"]:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
   }
   .item-content {
     min-width: 0;
@@ -191,7 +184,6 @@
   }
   .badge.must { background: var(--must-bg); color: var(--must); }
   .badge.nice { background: var(--nice-bg); color: var(--nice); }
-  .badge.planit { background: var(--planit-bg); color: var(--planit); }
   .badge.advanced { background: var(--advanced-bg); color: var(--advanced); }
   .item-hours {
     font-variant-numeric: tabular-nums;
@@ -345,7 +337,6 @@ const ITEMS = [
   { section: '2. Security, Identity, & Tenant Isolation', name: 'Auth Handoff', label: 'must', hours: 8, recommendation: 'OneLogin JWT to chainlit react-client init.' },
   { section: '2. Security, Identity, & Tenant Isolation', name: 'Token Decoding & Identity Mapping', label: 'nice', hours: 12, recommendation: 'Required if multi-tenant.' },
   { section: '2. Security, Identity, & Tenant Isolation', name: 'Prompt/Context Injection', label: 'nice', hours: 16, recommendation: 'FLAG: should be Must-Have. Without it any authenticated user can read all tenants data.', flag: true },
-  { section: '2. Security, Identity, & Tenant Isolation', name: 'Database Service Account Lockdown', label: 'planit', hours: 0, recommendation: 'Owned by Planit (read replica). No SOW hours.' },
 
   { section: '3. Ontological Sorting & Semantic Architecture', name: 'Concept Mapping & Synonym Libraries', label: 'must', hours: 16, recommendation: 'Steering docs + synonym table. No knowledge graph per client note.' },
   { section: '3. Ontological Sorting & Semantic Architecture', name: 'Entity Resolution & Hierarchy Linking', label: 'must', hours: 12, recommendation: 'Hierarchy lookup tables (SKU to Style-Color to Style).' },
@@ -367,14 +358,13 @@ const ITEMS = [
 
   { section: '6. LLMOps, Observability, & Quality Tuning', name: 'Telemetry Integration', label: 'must', hours: 12, recommendation: 'Log prompt, RAG context, SQL, time, tokens.' },
   { section: '6. LLMOps, Observability, & Quality Tuning', name: 'User Feedback Mechanism', label: 'must', hours: 8, recommendation: 'Thumbs up/down + Report Issue, route to dashboard.' },
-  { section: '6. LLMOps, Observability, & Quality Tuning', name: 'Cost Monitoring', label: 'planit', hours: 0, recommendation: 'Owned by Planit. No SOW hours.' },
   { section: '6. LLMOps, Observability, & Quality Tuning', name: 'Documentation', label: 'must', hours: 24, recommendation: 'Runbooks, architecture diagrams, Terraform/CFN.' }
 ];
 
 const BLENDED_RATE = 200.58;
 const DISCOUNT = 42100;
 const MIX = { principal: 0.043478, sa: 0.289855, de: 0.579710, pm: 0.086957 };
-const SELECTABLE = ITEMS.filter(i => i.label !== 'planit').length;
+const SELECTABLE = ITEMS.length;
 
 const STD_NICE = ['Mid-Task Input Handling','Token Decoding & Identity Mapping','Prompt/Context Injection','Citation Formatting'];
 const PRESETS = {
@@ -382,7 +372,7 @@ const PRESETS = {
   steering: { label: 'Steering Docs (Old Opt 2)', filter: i => i.label === 'must' || STD_NICE.includes(i.name) },
   react:    { label: 'Full React Chat', filter: i => i.label === 'must' || STD_NICE.includes(i.name) || i.name === 'Full React Chat Rebuild Premium' },
   ontology: { label: 'Schema-Aware Ontology (Old Opt 1)', filter: i => i.label === 'must' || STD_NICE.includes(i.name) || i.name === 'Schema-Aware Retrieval (GraphRAG)' },
-  all:      { label: 'All In', filter: i => i.label !== 'planit' },
+  all:      { label: 'All In', filter: () => true },
   clear:    { label: 'Cleared', filter: () => false }
 };
 
@@ -417,12 +407,11 @@ function render() {
     for (const item of items) {
       const idx = ITEMS.indexOf(item);
       const isSelected = state.selected.has(idx);
-      const isPlanit = item.label === 'planit';
-      const labelText = item.label === 'must' ? 'Must-Have' : item.label === 'nice' ? 'Nice-to-Have' : 'Planit-Owned';
+      const labelText = item.label === 'must' ? 'Must-Have' : item.label === 'nice' ? 'Nice-to-Have' : 'Advanced';
       const itemEl = document.createElement('div');
-      itemEl.className = `item${isSelected ? ' selected' : ''}${item.flag ? ' flagged' : ''}${isPlanit ? ' planit' : ''}`;
+      itemEl.className = `item${isSelected ? ' selected' : ''}${item.flag ? ' flagged' : ''}`;
       itemEl.innerHTML = `
-        <input type="checkbox" data-idx="${idx}" ${isSelected ? 'checked' : ''} ${isPlanit ? 'disabled' : ''}>
+        <input type="checkbox" data-idx="${idx}" ${isSelected ? 'checked' : ''}>
         <div class="item-content">
           <div class="item-name">${item.name}</div>
           <div class="item-recommendation${item.flag ? ' flag-text' : ''}">${item.recommendation}</div>
@@ -554,8 +543,7 @@ function exportToExcel() {
   for (const sec of sections) {
     selected.filter(i => i.section === sec).forEach(i => {
       const labelText = i.label === 'must' ? 'Must-Have' :
-                       i.label === 'nice' ? 'Nice-to-Have' :
-                       i.label === 'advanced' ? 'Advanced / Optional' : 'Planit-Owned';
+                       i.label === 'nice' ? 'Nice-to-Have' : 'Advanced / Optional';
       itemsData.push([sec, i.name, labelText, i.hours, i.recommendation]);
     });
   }
