@@ -290,10 +290,8 @@
 <main class="layout">
   <section class="config-area">
     <div class="presets">
-      <button data-preset="lite">Must-Have Only (Lite)</button>
-      <button data-preset="steering">Steering Docs (Old Opt 2)</button>
-      <button data-preset="react">Full React Chat</button>
-      <button data-preset="ontology">Schema-Aware Ontology (Old Opt 1)</button>
+      <button data-preset="lite">Must-Have Only</button>
+      <button data-preset="steering">Steering Docs + Chainlit</button>
       <button data-preset="all">All In</button>
       <button data-preset="clear" class="clear">Clear All</button>
     </div>
@@ -368,10 +366,8 @@ const SELECTABLE = ITEMS.length;
 
 const STD_NICE = ['Mid-Task Input Handling','Token Decoding & Identity Mapping','Prompt/Context Injection','Citation Formatting'];
 const PRESETS = {
-  lite:     { label: 'Must-Have Only (Lite)', filter: i => i.label === 'must' },
-  steering: { label: 'Steering Docs (Old Opt 2)', filter: i => i.label === 'must' || STD_NICE.includes(i.name) },
-  react:    { label: 'Full React Chat', filter: i => i.label === 'must' || STD_NICE.includes(i.name) || i.name === 'Full React Chat Rebuild Premium' },
-  ontology: { label: 'Schema-Aware Ontology (Old Opt 1)', filter: i => i.label === 'must' || STD_NICE.includes(i.name) || i.name === 'Schema-Aware Retrieval (GraphRAG)' },
+  lite:     { label: 'Must-Have Only', filter: i => i.label === 'must' },
+  steering: { label: 'Steering Docs + Chainlit', filter: i => i.label === 'must' || STD_NICE.includes(i.name) },
   all:      { label: 'All In', filter: () => true },
   clear:    { label: 'Cleared', filter: () => false }
 };
@@ -479,10 +475,8 @@ function updatePresetInfo() {
   const info = document.getElementById('preset-info');
   if (state.preset) {
     const labels = {
-      lite: 'Must-Have items only. Minimum production-ready scope. Skips two items (Prompt Injection, Citation Formatting) that production users will likely flag as missing.',
-      steering: 'Old Option 2 equivalent. Must-Have plus four key Nice-to-Haves promoted to scope: Mid-Task Input, Token Decoding, Prompt Injection (security), Citation Formatting (compliance). Chainlit MVP frontend.',
-      react: 'Steering Docs scope plus Full React Chat Rebuild Premium. Replaces Chainlit MVP with a custom React chat. Use when the client wants a fully native UI.',
-      ontology: 'Old Option 1 equivalent. Steering Docs scope plus Schema-Aware Retrieval (GraphRAG). NOTE: xlsx scope note explicitly rules out a knowledge graph build, so include only if the client revises that position.',
+      lite: 'Must-Have items only. Minimum production-ready scope. Skips Prompt Injection (security) and Citation Formatting (compliance), which production users will likely flag as missing.',
+      steering: 'Recommended scope. Must-Have plus four key Nice-to-Haves: Mid-Task Input, Token Decoding, Prompt Injection (security), Citation Formatting (compliance). Chainlit MVP frontend.',
       all: 'Everything selectable: Must-Have, all Nice-to-Have including Thinking Indicators, plus both advanced add-ons (Full React Rebuild and GraphRAG).',
       clear: 'No items selected. Pick a preset or check items individually.'
     };
