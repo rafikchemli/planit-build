@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planit AI Agent · POC to Production Pilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #FFFFFF;
+  --bg-soft: #F6F9FC;
+  --bg-band: #FAFBFC;
+  --ink: #1A1F36;
+  --ink-soft: #3C4257;
+  --muted: #697386;
+  --muted-soft: #8F95A3;
+  --hairline: #E3E8EE;
+  --hairline-strong: #C1C9D2;
+  --accent: #635BFF;
+  --accent-hover: #5851E0;
+  --accent-soft: #F1F0FF;
+  --warn: #C2410C;
+  --warn-soft: #FFF4ED;
+  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11';
+}
+
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* HEADER */
+header.site {
+  border-bottom: 1px solid var(--hairline);
+  padding: 16px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: saturate(180%) blur(10px);
+  -webkit-backdrop-filter: saturate(180%) blur(10px);
+}
+.site .wordmark {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+}
+.site .wordmark .sep { color: var(--muted-soft); margin: 0 8px; font-weight: 400; }
+.site .wordmark .sub { color: var(--muted); font-weight: 450; }
+.site .meta {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* HERO */
+.hero {
+  padding: 88px 40px 72px;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+.hero .eyebrow {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+.hero h1 {
+  font-size: clamp(36px, 4.4vw, 52px);
+  line-height: 1.08;
+  letter-spacing: -0.022em;
+  font-weight: 600;
+  max-width: 22ch;
+  margin-bottom: 20px;
+  color: var(--ink);
+}
+.hero .lead {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  max-width: 60ch;
+  font-weight: 400;
+}
+
+/* TIERS */
+.tiers-wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 40px 24px;
+}
+.tiers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.tier {
+  background: var(--bg);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 28px 24px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  position: relative;
+  min-height: 220px;
+}
+.tier:hover {
+  border-color: var(--hairline-strong);
+}
+.tier.active {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+.tier.recommended {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.tier.recommended.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.tier .recommended-label {
+  position: absolute;
+  top: -10px;
+  left: 24px;
+  background: var(--accent);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+.tier .tag {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.tier .name {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.tier .desc {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  flex-grow: 1;
+}
+.tier .price-block {
+  border-top: 1px solid var(--hairline);
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tier .price {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  color: var(--ink);
+}
+.tier .price .currency { font-size: 16px; font-weight: 500; color: var(--muted); }
+.tier .price .amount {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.tier .price-meta {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.tier .price-qual { color: var(--muted-soft); margin-right: 6px; }
+
+/* AWS callout */
+.aws-callout {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 16px 40px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.aws-callout strong { color: var(--ink); font-weight: 600; }
+.aws-callout .dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* MAIN */
+.main {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 56px;
+  padding: 64px 40px 96px;
+}
+
+/* CONFIGURATOR */
+.config h2 {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.014em;
+  margin-bottom: 8px;
+  color: var(--ink);
+}
+.config .subhead {
+  color: var(--muted);
+  font-size: 14px;
+  margin-bottom: 32px;
+  max-width: 60ch;
+  line-height: 1.55;
+}
+
+.section {
+  border-top: 1px solid var(--hairline);
+  padding: 24px 0 18px;
+}
+.section:last-child { border-bottom: 1px solid var(--hairline); }
+.section-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.section-head-left { display: flex; align-items: baseline; gap: 12px; }
+.section-num {
+  font-size: 12px;
+  color: var(--muted-soft);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.section h3 {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.008em;
+  line-height: 1.3;
+  color: var(--ink);
+}
+.section-copy { display: flex; flex-direction: column; }
+.section-desc {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 70ch;
+}
+.section-meta {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.section-meta strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ITEMS */
+.items { display: flex; flex-direction: column; }
+.item {
+  display: grid;
+  grid-template-columns: 18px 1fr auto auto;
+  gap: 16px;
+  align-items: baseline;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--hairline);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.item:last-child { border-bottom: none; }
+.item:hover .item-name { color: var(--accent); }
+
+.item-checkbox {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--hairline-strong);
+  background: var(--bg);
+  border-radius: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  align-self: start;
+  margin-top: 2px;
+  transition: all 0.12s;
+}
+.item:hover .item-checkbox { border-color: var(--muted); }
+.item.selected .item-checkbox {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.item.selected .item-checkbox::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 4px;
+  border-left: 1.5px solid white;
+  border-bottom: 1.5px solid white;
+  transform: rotate(-45deg);
+  top: 3px;
+  left: 2.5px;
+}
+
+.item-body { min-width: 0; }
+.item-name {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  transition: color 0.12s;
+}
+.item-rec {
+  display: none;
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 6px;
+  line-height: 1.55;
+  max-width: 64ch;
+}
+.item:hover .item-rec { display: block; }
+
+
+.badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  white-space: nowrap;
+  font-weight: 600;
+  border-radius: 3px;
+  align-self: start;
+  margin-top: 1px;
+}
+.badge.must { background: #ECFDF5; color: #047857; }
+.badge.preset { background: #FFFBEB; color: #B45309; }
+.badge.optional { background: #FFFBEB; color: #B45309; }
+.badge.advanced { background: var(--accent-soft); color: var(--accent); }
+
+.item-hours {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  min-width: 36px;
+  align-self: start;
+  margin-top: 2px;
+}
+.item.selected .item-hours { color: var(--ink); font-weight: 600; }
+
+/* CHAT SURFACE TOGGLE (WS1) */
+.framework-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  margin-bottom: 4px;
+  background: var(--bg-band);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+}
+.ft-label {
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+.ft-options {
+  display: inline-flex;
+  background: var(--bg);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  padding: 2px;
+}
+.ft-option {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+.ft-option:hover { color: var(--ink); }
+.ft-option.active {
+  background: var(--ink);
+  color: white;
+}
+.ft-option .ft-delta {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  margin-left: 4px;
+  opacity: 0.7;
+}
+.item.locked {
+  cursor: default;
+}
+.item.locked:hover .item-name {
+  color: var(--ink);
+}
+.item.locked .item-checkbox {
+  opacity: 0.75;
+}
+
+/* SUMMARY */
+aside.summary {
+  position: sticky;
+  top: 88px;
+  height: fit-content;
+}
+.summary-card {
+  border: 1px solid var(--hairline);
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 24px;
+}
+aside .label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.preset-name {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: var(--ink);
+  margin-bottom: 20px;
+  min-height: 24px;
+}
+
+.numbers {
+  border-top: 1px solid var(--hairline);
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.num-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 14px;
+}
+.num-row .label {
+  margin: 0;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+  font-weight: 400;
+}
+.num-row .val {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.num-row.discount .val { color: var(--accent); }
+.num-row.total {
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
+  align-items: baseline;
+}
+.num-row.total .label { color: var(--ink); font-weight: 500; font-size: 14px; }
+.num-row.total .val {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+  color: var(--ink);
+}
+
+.cta-primary {
+  display: block;
+  width: 100%;
+  margin-top: 20px;
+  padding: 11px 16px;
+  background: var(--accent);
+  color: white;
+  border: 1px solid var(--accent);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.cta-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.cta-primary:disabled {
+  background: var(--bg-soft);
+  color: var(--muted-soft);
+  border-color: var(--hairline);
+  cursor: not-allowed;
+}
+.cta-secondary {
+  display: block;
+  text-align: center;
+  margin-top: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  padding: 6px 0;
+  font-weight: 500;
+}
+.cta-secondary:hover { color: var(--accent); }
+.cta-secondary:disabled { color: var(--hairline-strong); cursor: not-allowed; }
+
+/* FOOTER */
+footer {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px 40px 40px;
+  border-top: 1px solid var(--hairline);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  color: var(--muted);
+}
+footer a { color: var(--ink); text-decoration: none; }
+footer a:hover { color: var(--accent); text-decoration: underline; }
+
+/* RESPONSIVE */
+@media (max-width: 980px) {
+  .hero { padding: 56px 24px 40px; }
+  .tiers-wrap { padding: 0 24px 16px; }
+  .tiers { grid-template-columns: 1fr; gap: 12px; }
+  .aws-callout { padding: 12px 24px 0; }
+  .main { grid-template-columns: 1fr; gap: 40px; padding: 48px 24px 64px; }
+  aside.summary { position: static; }
+  header.site, footer { padding: 14px 24px; }
+  footer { padding-bottom: 32px; }
+}
+@media (max-width: 560px) {
+  .item { grid-template-columns: 18px 1fr auto; gap: 12px; }
+  .item .badge { display: none; }
+  .hero h1 { font-size: 32px; }
+}
+
+/* PRINT */
+.print-only { display: none; }
+
+@media print {
+  @page { size: letter; margin: 0.6in 0.7in; }
+  body { background: white; color: var(--ink); }
+  header.site, .hero, .tiers-wrap, .aws-callout, .config, aside.summary, footer { display: none !important; }
+  .main { display: block !important; padding: 0 !important; max-width: none !important; gap: 0 !important; }
+  .print-only { display: block !important; }
+}
+
+.prop {
+  font-family: var(--sans);
+  color: var(--ink);
+  font-size: 10.5pt;
+  line-height: 1.5;
+}
+.prop-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 14px;
+  margin-bottom: 36px;
+  font-size: 9pt;
+  color: var(--muted);
+}
+.prop-head .mark {
+  font-size: 11pt;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+}
+.prop-head .mark .sub { color: var(--muted); font-weight: 450; }
+
+.prop-eyebrow {
+  font-size: 9pt;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+.prop-title {
+  font-size: 30pt;
+  line-height: 1.05;
+  letter-spacing: -0.022em;
+  margin-bottom: 8px;
+  font-weight: 600;
+  max-width: 22ch;
+  color: var(--ink);
+}
+.prop-preset {
+  font-size: 13pt;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+.prop-assumption {
+  font-size: 9.5pt;
+  color: var(--muted);
+  max-width: 72ch;
+  margin-bottom: 34px;
+}
+
+.prop-numbers {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  padding: 22px 0 24px;
+  margin-bottom: 40px;
+}
+.prop-numbers > div { display: flex; flex-direction: column; gap: 6px; }
+.prop-num-label {
+  font-size: 9pt;
+  color: var(--muted);
+  font-weight: 500;
+}
+.prop-num-val {
+  font-size: 22pt;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.022em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.prop-num-total .prop-num-val { color: var(--accent); }
+
+.prop-section-title {
+  font-size: 15pt;
+  margin-bottom: 18px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+}
+
+.prop-section { margin-bottom: 20px; break-inside: avoid; }
+.prop-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--hairline);
+}
+.prop-section-name {
+  font-size: 9pt;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+.prop-section-desc {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 8.7pt;
+  line-height: 1.5;
+}
+.prop-section-hrs {
+  font-size: 9pt;
+  color: var(--accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.prop-items { list-style: none; padding: 0; margin: 0; }
+.prop-items li {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 10pt;
+  color: var(--ink-soft);
+}
+.prop-item-hrs {
+  color: var(--muted);
+  font-size: 9pt;
+  font-variant-numeric: tabular-nums;
+}
+
+.prop-foot {
+  margin-top: 48px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+  font-size: 8.5pt;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.prop-foot a { color: var(--ink); text-decoration: none; }
+.prop-disclaimer { color: var(--muted-soft); }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wordmark">Planit AI Agent<span class="sep">/</span><span class="sub">POC to Production Pilot</span></div>
+  <div class="meta tnum"><span id="gen-date"></span></div>
+</header>
+
+<section class="hero">
+  <div class="eyebrow">Scope breakdown by workstream</div>
+  <h1>Planit AI Agent - POC to Production Pilot</h1>
+  <p class="lead">Assumes Planit already has read-only RDS access, OpenSearch, FastAPI on ECS, Bedrock, and a Chainlit-based POC. Scope focuses on hardening that POC into a production pilot: tenant isolation, SQL safety, guardrails, retrieval quality, telemetry, and operations.</p>
+</section>
+
+<div class="tiers-wrap">
+  <div class="tiers">
+    <button class="tier" data-preset="lite" type="button">
+      <span class="tag">Lite</span>
+      <span class="name">Must-Have Baseline</span>
+      <span class="desc">Pilot essentials on top of the existing POC assets: Chainlit, FastAPI/ECS, Bedrock, OpenSearch, and read-only RDS.</span>
+      <div class="price-block">
+        <span class="price"><span class="currency">$</span><span class="amount" data-tier-price="lite">0</span></span>
+        <span class="price-meta"><span class="price-qual">After AWS funding.</span><span data-tier-hrs="lite">0</span>h, <span data-tier-wks="lite">0</span> wks</span>
+      </div>
+    </button>
+
+    <button class="tier recommended" data-preset="steering" type="button">
+      <span class="recommended-label">Recommended</span>
+      <span class="tag">Production Pilot</span>
+      <span class="name">Pilot Hardening + Chainlit</span>
+      <span class="desc">Adds the production pilot controls: Bedrock guardrails, hybrid retrieval/reranking, thinking indicators, conversational memory, and policy boundaries.</span>
+      <div class="price-block">
+        <span class="price"><span class="currency">$</span><span class="amount" data-tier-price="steering">0</span></span>
+        <span class="price-meta"><span class="price-qual">After AWS funding.</span><span data-tier-hrs="steering">0</span>h, <span data-tier-wks="steering">0</span> wks</span>
+      </div>
+    </button>
+
+    <button class="tier" data-preset="all" type="button">
+      <span class="tag">All-In</span>
+      <span class="name">Full Scope + React</span>
+      <span class="desc">Includes the recommended pilot, optional UX visibility, GraphRAG/ontology uplift, and a custom React chat surface.</span>
+      <div class="price-block">
+        <span class="price"><span class="currency">$</span><span class="amount" data-tier-price="all">0</span></span>
+        <span class="price-meta"><span class="price-qual">After AWS funding.</span><span data-tier-hrs="all">0</span>h, <span data-tier-wks="all">0</span> wks</span>
+      </div>
+    </button>
+  </div>
+</div>
+
+<div class="aws-callout">
+  <span class="dot"></span>
+  <span><strong>AWS funded $42,100</strong>, pre-applied to all tiers above. Contingent on customer approval.</span>
+</div>
+
+<main class="main">
+  <section class="config">
+    <h2>Refine the scope</h2>
+    <p class="subhead">Click any row to select or deselect. Hover to read the scope notes for each deliverable.</p>
+    <div id="sections-container"></div>
+  </section>
+
+  <aside class="summary">
+    <div class="summary-card">
+      <div class="label">Selected scope</div>
+      <div class="preset-name" id="preset-name">Pilot Hardening + Chainlit</div>
+
+      <div class="numbers">
+        <div class="num-row">
+          <span class="label">Hours</span>
+          <span class="val" id="hours-display">0</span>
+        </div>
+        <div class="num-row">
+          <span class="label">Subtotal</span>
+          <span class="val" id="subtotal-display">$0</span>
+        </div>
+        <div class="num-row discount">
+          <span class="label">AWS funding</span>
+          <span class="val" id="discount-display">−$42,100</span>
+        </div>
+        <div class="num-row total">
+          <span class="label">Total</span>
+          <span class="val" id="total-display">$0</span>
+        </div>
+      </div>
+
+      <button class="cta-primary" id="export-pdf" type="button">Download proposal (PDF)</button>
+      <button class="cta-secondary" id="export-xlsx" type="button">Or download Excel</button>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <div>Planit AI Agent POC to Production Pilot</div>
+  <div><a href="https://rafikchemli.github.io/planit-build/">rafikchemli.github.io/planit-build</a></div>
+</footer>
+
+<div class="print-only" id="proposal-doc"></div>
+
+<script>
+const SECTION_META = {
+  'WS1 · Chat Experience': {
+    code: 'WS1',
+    description: 'Use the existing Chainlit POC as the baseline chat surface while keeping a custom React surface as an optional uplift.',
+  },
+  'WS2 · Authentication & Tenant Isolation': {
+    code: 'WS2',
+    description: 'Bind OneLogin identity to every request, prompt, retrieval filter, and SQL execution path.',
+  },
+  'WS3 · Business Knowledge & RAG Quality': {
+    code: 'WS3',
+    description: 'Domain steering, source freshness, hybrid retrieval, reranking, citations, and advanced schema-aware context for scalable NL-to-SQL.',
+  },
+  'WS4 · Agent Reasoning, Guardrails & SQL Safety': {
+    code: 'WS4',
+    description: 'Route questions, carry conversation context, validate tool use and SQL before execution, enforce tenant constraints, and recover from safe failures.',
+  },
+  'WS5 · Production Runtime & Operations': {
+    code: 'WS5',
+    description: 'FastAPI/ECS hardening, RDS query path, observability, cost controls, user feedback, and handoff docs.',
+  },
+};
+
+const ITEMS = [
+  { section: 'WS1 · Chat Experience', name: 'Wire Existing Chainlit Chat POC', label: 'must', hours: 8, recommendation: 'Treat Chainlit as the baseline chat surface and connect it cleanly to the existing agent backend, auth flow, and deployment path.' },
+  { section: 'WS1 · Chat Experience', name: 'Structured Response Rendering', label: 'must', hours: 16, recommendation: 'Render structured agent responses including markdown, tables, chart-ready JSON, and downloadable CSV/Excel exports.' },
+  { section: 'WS1 · Chat Experience', name: 'State & History Management', label: 'must', hours: 8, recommendation: 'Persist chat state and conversation history per authenticated user, restored across sessions.' },
+  { section: 'WS1 · Chat Experience', name: 'Mid-Task Input Handling', label: 'preset', hours: 12, recommendation: 'Use Chainlit ask/resume patterns so the agent can ask clarifying questions without losing thread context.' },
+  { section: 'WS1 · Chat Experience', name: '"Thinking" Indicators', label: 'preset', hours: 8, recommendation: 'Visualizes intermediate reasoning steps so users see progress during multi-query agent loops.' },
+  { section: 'WS1 · Chat Experience', name: 'Custom React Chat Surface', label: 'advanced', hours: 33, recommendation: 'Replaces the default Chainlit web UI with a custom React frontend connected to the Chainlit backend via @chainlit/react-client.', surface: true },
+
+  { section: 'WS2 · Authentication & Tenant Isolation', name: 'OneLogin Auth Handoff', label: 'must', hours: 8, recommendation: 'Pass the OneLogin JWT into the chat and API initialization path.' },
+  { section: 'WS2 · Authentication & Tenant Isolation', name: 'JWT Decoding & User Mapping', label: 'must', hours: 12, recommendation: 'Map OneLogin identity to application user, tenant, role, and allowed data context.' },
+  { section: 'WS2 · Authentication & Tenant Isolation', name: 'Tenant Context Injection', label: 'must', hours: 16, recommendation: 'Inject tenant/user context into prompts, retrieval filters, and SQL constraints so the agent cannot reason outside the user boundary.', flag: true },
+  { section: 'WS2 · Authentication & Tenant Isolation', name: 'Auth Failure Handling & Audit Events', label: 'preset', hours: 8, recommendation: 'Log denied, expired, malformed, and tenant-mismatch auth events for operational review.' },
+
+  { section: 'WS3 · Business Knowledge & RAG Quality', name: 'Domain Steering Documentation', label: 'must', hours: 20, recommendation: 'Single structured document the agent reads as context: synonym tables, product hierarchies, phrase-to-column mappings, lifecycle states. Pilot intentionally avoids a code-side ontology engine.' },
+  { section: 'WS3 · Business Knowledge & RAG Quality', name: 'OpenSearch Index Hygiene & Metadata', label: 'must', hours: 8, recommendation: 'Use the existing OpenSearch deployment, but normalize source, version, tenant, document type, and freshness metadata for retrieval control.' },
+  { section: 'WS3 · Business Knowledge & RAG Quality', name: 'Ingestion Hardening', label: 'must', hours: 12, recommendation: 'Harden S3-driven ingestion for updated documents, parser failures, dead-letter handling, and CloudWatch visibility.' },
+  { section: 'WS3 · Business Knowledge & RAG Quality', name: 'Versioning, Purging & Freshness Rules', label: 'must', hours: 8, recommendation: 'Detect source updates and purge or replace stale vectors so answers reflect the latest approved source.' },
+  { section: 'WS3 · Business Knowledge & RAG Quality', name: 'Citation & Grounded Source Formatting', label: 'must', hours: 8, recommendation: 'Return cited source snippets, document metadata, and confidence cues for compliance and trust.', flag: true },
+  { section: 'WS3 · Business Knowledge & RAG Quality', name: 'Hybrid Retrieval Strategy', label: 'preset', hours: 16, recommendation: 'Combine semantic vector search with keyword/BM25 retrieval where source wording matters, then tune query decomposition and metadata filters.' },
+  { section: 'WS3 · Business Knowledge & RAG Quality', name: 'Reranking & Retrieval Tuning', label: 'preset', hours: 12, recommendation: 'Add reranking and evaluation-driven tuning for top-k, chunk size, overlap, metadata weighting, and source diversity.' },
+  { section: 'WS3 · Business Knowledge & RAG Quality', name: 'Schema-Aware Retrieval (GraphRAG)', label: 'advanced', hours: 124, recommendation: 'Advanced NL-to-SQL scalability layer: retrieve relevant table metadata with vector search, traverse the foreign-key graph to find join paths, and load only the necessary schemas into context to avoid context overflow and table-selection guesswork.' },
+  { section: 'WS3 · Business Knowledge & RAG Quality', name: 'Structured Business Ontology & SQL Semantic Layer', label: 'advanced', hours: 48, recommendation: 'Advanced alternative/uplift to steering-doc-only context. Encodes Planit business terms, metrics, hierarchies, lifecycle states, phrase-to-column mappings, approved joins, and grain rules into a machine-readable semantic layer for clearer SQL interpretation.' },
+
+  { section: 'WS4 · Agent Reasoning, Guardrails & SQL Safety', name: 'Intent Triage & Clarification Thresholds', label: 'must', hours: 12, recommendation: 'Classify requests before SQL or RAG, and ask clarifying questions when confidence or tenant context is insufficient.' },
+  { section: 'WS4 · Agent Reasoning, Guardrails & SQL Safety', name: 'Existing RAG/SQL Loop Hardening', label: 'must', hours: 8, recommendation: 'Refine the existing RAG plus SQL loop with explicit route selection, traceable tool decisions, bounded retries, and cleaner answer synthesis.' },
+  { section: 'WS4 · Agent Reasoning, Guardrails & SQL Safety', name: 'Conversational Memory & Preferences', label: 'preset', hours: 16, recommendation: 'Bedrock AgentCore Memory: retain session context and user preferences across interactions while isolating memory by JWT user ID.' },
+  { section: 'WS4 · Agent Reasoning, Guardrails & SQL Safety', name: 'Loop Boundaries & Graceful Failover', label: 'must', hours: 8, recommendation: 'Set max iterations, tool timeouts, and safe fallback responses when the agent cannot complete a task confidently.' },
+  { section: 'WS4 · Agent Reasoning, Guardrails & SQL Safety', name: 'Schema & Metric Bounding', label: 'must', hours: 12, recommendation: 'Restrict SQL generation to curated schemas, approved joins, and documented metric definitions.' },
+  { section: 'WS4 · Agent Reasoning, Guardrails & SQL Safety', name: 'SQL AST Validation & Deny Rules', label: 'must', hours: 12, recommendation: 'Parse SQL before execution; block writes, cross joins, unbounded scans, unsafe functions, and queries without LIMIT where appropriate.' },
+  { section: 'WS4 · Agent Reasoning, Guardrails & SQL Safety', name: 'Tenant-Aware SQL Enforcement', label: 'must', hours: 8, recommendation: 'Verify generated SQL includes the required tenant filters before execution against the read-only RDS role.' },
+  { section: 'WS4 · Agent Reasoning, Guardrails & SQL Safety', name: 'Error Handling Loop', label: 'must', hours: 8, recommendation: 'Read database errors, rewrite safe queries, and retry under bounded retry rules.' },
+  { section: 'WS4 · Agent Reasoning, Guardrails & SQL Safety', name: 'Bedrock Guardrails & Contextual Grounding', label: 'preset', hours: 16, recommendation: 'Configure content filters, denied topics, sensitive information handling, and grounding checks around retrieved context.' },
+  { section: 'WS4 · Agent Reasoning, Guardrails & SQL Safety', name: 'Tool Policy Boundaries', label: 'preset', hours: 8, recommendation: 'Scope agent tools, IAM/runtime permissions, and action policies so the agent only invokes approved capabilities.' },
+
+  { section: 'WS5 · Production Runtime & Operations', name: 'FastAPI/ECS Runtime Hardening', label: 'must', hours: 12, recommendation: 'Harden the existing FastAPI service on ECS with environment configuration, health checks, deploy settings, and secret handling.' },
+  { section: 'WS5 · Production Runtime & Operations', name: 'RDS Connection Pooling & Query Path', label: 'must', hours: 8, recommendation: 'Stabilize the read-only RDS execution path with pooling, statement timeouts, error normalization, and safe result limits.' },
+  { section: 'WS5 · Production Runtime & Operations', name: 'Telemetry & Trace Correlation', label: 'must', hours: 12, recommendation: 'Correlate prompt, user, RAG context, generated SQL, guardrail result, latency, token usage, and final answer.' },
+  { section: 'WS5 · Production Runtime & Operations', name: 'User Feedback Mechanism', label: 'must', hours: 8, recommendation: 'Thumbs up/down plus Report Issue, routed to review with trace context.' },
+  { section: 'WS5 · Production Runtime & Operations', name: 'Documentation & Handoff Runbooks', label: 'must', hours: 12, recommendation: 'Architecture notes, runbooks, deployment steps, operational responsibilities, and known limitations.' },
+  { section: 'WS5 · Production Runtime & Operations', name: 'CloudWatch Dashboards & Alarms', label: 'optional', hours: 8, recommendation: 'Operational dashboards and alerts for API health, ingestion failures, retrieval errors, SQL failures, and latency.' },
+  { section: 'WS5 · Production Runtime & Operations', name: 'Bedrock Cost & Quota Controls', label: 'optional', hours: 8, recommendation: 'Track token spend, model usage, throttling, quota risk, and budget alarms.' },
+  { section: 'WS5 · Production Runtime & Operations', name: 'Tool Invocation Audit Log', label: 'optional', hours: 8, recommendation: 'Persist agent tool calls, SQL attempts, guardrail blocks, and retrieval source IDs for support and compliance review.' },
+];
+
+const BLENDED_RATE = 200.58;
+const DISCOUNT = 42100;
+const MIX = { principal: 0.043478, sa: 0.289855, de: 0.579710, pm: 0.086957 };
+const DASHBOARD_URL = 'https://rafikchemli.github.io/planit-build/';
+const BASELINE_ASSUMPTION = 'Baseline assumption: Planit already has read-only RDS access, OpenSearch, FastAPI on ECS, Bedrock, and a Chainlit-based POC. This proposal prices production pilot hardening and integration, not greenfield infrastructure setup.';
+
+const PRESETS = {
+  lite:     { label: 'Must-Have Baseline', filter: i => i.label === 'must' },
+  steering: { label: 'Pilot Hardening + Chainlit', filter: i => i.label === 'must' || i.label === 'preset' },
+  all:      { label: 'Full Scope + React', filter: () => true },
+};
+
+const state = { selected: new Set(), preset: null };
+const CHAT_SURFACE_ITEM = 'Custom React Chat Surface';
+const WS1_BASE_ITEMS = [
+  'Wire Existing Chainlit Chat POC',
+  'Structured Response Rendering',
+  'State & History Management',
+];
+
+function getItemIndexByName(name) {
+  return ITEMS.findIndex(i => i.name === name);
+}
+
+function isReactSurfaceSelected() {
+  const idx = getItemIndexByName(CHAT_SURFACE_ITEM);
+  return idx >= 0 && state.selected.has(idx);
+}
+
+function getChatSurfaceLabel() {
+  return isReactSurfaceSelected() ? 'Custom React' : 'Chainlit MVP';
+}
+
+function setChatSurface(surface) {
+  const reactIdx = getItemIndexByName(CHAT_SURFACE_ITEM);
+  if (reactIdx < 0) return;
+
+  if (surface === 'react') {
+    WS1_BASE_ITEMS.forEach(name => {
+      const idx = getItemIndexByName(name);
+      if (idx >= 0) state.selected.add(idx);
+    });
+    state.selected.add(reactIdx);
+  } else {
+    state.selected.delete(reactIdx);
+  }
+
+  state.preset = null;
+  renderAll();
+}
+
+function calcTotals(workingHrs) {
+  const totalHrs = workingHrs > 0 ? Math.ceil(workingHrs / (1 - MIX.principal - MIX.pm)) : 0;
+  const subtotalRaw = totalHrs * BLENDED_RATE;
+  const subtotal = workingHrs > 0 ? Math.ceil(subtotalRaw / 100) * 100 : 0;
+  const net = subtotal - DISCOUNT;
+  const durationWks = workingHrs > 0 ? Math.ceil(workingHrs / 47) : 0;
+  return { workingHrs, totalHrs, subtotal, net, durationWks };
+}
+
+function calcTierTotals(presetKey) {
+  const filter = PRESETS[presetKey].filter;
+  const workingHrs = ITEMS.filter(filter).reduce((s, i) => s + i.hours, 0);
+  return calcTotals(workingHrs);
+}
+
+function render() {
+  const container = document.getElementById('sections-container');
+  container.innerHTML = '';
+  const sections = Object.keys(SECTION_META);
+
+  sections.forEach((section) => {
+    const meta = SECTION_META[section];
+    const allItems = ITEMS.filter(i => i.section === section);
+    const surfaceItem = section === 'WS1 · Chat Experience' ? allItems.find(i => i.surface) : null;
+    const items = surfaceItem ? allItems.filter(i => !i.surface) : allItems;
+    const totalHrs = allItems.reduce((s, i) => s + i.hours, 0);
+    const selectedHrs = allItems.reduce((s, i) => {
+      const idx = ITEMS.indexOf(i);
+      return s + (state.selected.has(idx) ? i.hours : 0);
+    }, 0);
+    const reactSelected = isReactSurfaceSelected();
+    const toggleHTML = surfaceItem ? `
+        <div class="framework-toggle">
+          <span class="ft-label">Chat surface</span>
+          <div class="ft-options" role="group" aria-label="Chat surface">
+            <button class="ft-option ${!reactSelected ? 'active' : ''}" data-framework="chainlit" type="button">Chainlit MVP</button>
+            <button class="ft-option ${reactSelected ? 'active' : ''}" data-framework="react" type="button">Custom React<span class="ft-delta">+${surfaceItem.hours}h</span></button>
+          </div>
+        </div>
+      ` : '';
+
+    const div = document.createElement('div');
+    div.className = 'section';
+    div.innerHTML = `
+      <div class="section-head">
+        <div class="section-head-left">
+          <span class="section-num">${meta.code}</span>
+          <div class="section-copy">
+            <h3>${section}</h3>
+            <p class="section-desc">${meta.description}</p>
+          </div>
+        </div>
+        <span class="section-meta"><strong>${selectedHrs}</strong> / ${totalHrs}h</span>
+      </div>
+      ${toggleHTML}
+      <div class="items"></div>
+    `;
+    const itemsDiv = div.querySelector('.items');
+    items.forEach(item => {
+      const idx = ITEMS.indexOf(item);
+      const isSelected = state.selected.has(idx);
+      const isLocked = reactSelected && WS1_BASE_ITEMS.includes(item.name);
+      const itemEl = document.createElement('div');
+      const labelText = item.label === 'must'
+        ? 'Must-Have'
+        : item.label === 'preset'
+          ? 'Nice-to-Have (preset)'
+          : item.label === 'optional'
+            ? 'Nice-to-Have (optional)'
+            : 'Advanced';
+      itemEl.className = `item${isSelected ? ' selected' : ''}${isLocked ? ' locked' : ''}`;
+      itemEl.dataset.idx = idx;
+      itemEl.dataset.locked = isLocked ? '1' : '0';
+      itemEl.innerHTML = `
+        <div class="item-checkbox" data-checkbox="1"></div>
+        <div class="item-body">
+          <div class="item-name">${item.name}</div>
+          <div class="item-rec">${item.recommendation}</div>
+        </div>
+        <span class="badge ${item.label}">${labelText}</span>
+        <span class="item-hours">${item.hours}h</span>
+      `;
+      itemsDiv.appendChild(itemEl);
+    });
+    container.appendChild(div);
+  });
+
+  document.querySelectorAll('.ft-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setChatSurface(btn.dataset.framework === 'react' ? 'react' : 'chainlit');
+    });
+  });
+
+  document.querySelectorAll('.item').forEach(el => {
+    el.addEventListener('click', () => {
+      if (el.dataset.locked === '1') return;
+      const idx = parseInt(el.dataset.idx);
+      if (state.selected.has(idx)) state.selected.delete(idx);
+      else state.selected.add(idx);
+      state.preset = null;
+      renderAll();
+    });
+  });
+}
+
+function updateSummary() {
+  const workingHrs = [...state.selected].reduce((s, idx) => s + ITEMS[idx].hours, 0);
+  const t = calcTotals(workingHrs);
+
+  document.getElementById('hours-display').textContent = t.workingHrs;
+  document.getElementById('subtotal-display').textContent = '$' + t.subtotal.toLocaleString();
+  document.getElementById('total-display').textContent = (t.net < 0 ? '−' : '') + '$' + Math.abs(t.net).toLocaleString();
+
+  const presetEl = document.getElementById('preset-name');
+  if (state.preset) presetEl.textContent = PRESETS[state.preset].label;
+  else if (state.selected.size > 0) presetEl.textContent = `Custom selection (${getChatSurfaceLabel()})`;
+  else presetEl.textContent = 'No selection';
+
+  document.getElementById('export-pdf').disabled = state.selected.size === 0;
+  document.getElementById('export-xlsx').disabled = state.selected.size === 0;
+
+  document.querySelectorAll('.tier').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.preset === state.preset);
+  });
+}
+
+function updateTierPrices() {
+  ['lite', 'steering', 'all'].forEach(key => {
+    const t = calcTierTotals(key);
+    document.querySelector(`[data-tier-price="${key}"]`).textContent = Math.abs(t.net).toLocaleString();
+    document.querySelector(`[data-tier-hrs="${key}"]`).textContent = t.workingHrs;
+    document.querySelector(`[data-tier-wks="${key}"]`).textContent = t.durationWks;
+  });
+}
+
+function renderAll() {
+  render();
+  updateSummary();
+}
+
+function applyPreset(key) {
+  state.selected.clear();
+  ITEMS.forEach((item, idx) => {
+    if (PRESETS[key].filter(item)) state.selected.add(idx);
+  });
+  if (key !== 'all') {
+    const reactIdx = getItemIndexByName(CHAT_SURFACE_ITEM);
+    if (reactIdx >= 0) state.selected.delete(reactIdx);
+  }
+  state.preset = key;
+  renderAll();
+}
+
+document.querySelectorAll('.tier').forEach(btn => {
+  btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+});
+
+function buildProposalDoc() {
+  const selected = [...state.selected].map(i => ITEMS[i]);
+  const workingHrs = selected.reduce((s, i) => s + i.hours, 0);
+  const t = calcTotals(workingHrs);
+  const presetLabel = state.preset ? PRESETS[state.preset].label : 'Custom selection';
+  const chatSurfaceLabel = getChatSurfaceLabel();
+  const sections = Object.keys(SECTION_META).filter(section => selected.some(i => i.section === section));
+  const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  let html = `
+    <div class="prop">
+      <div class="prop-head">
+        <div class="mark">Planit AI Agent <span class="sub">/ POC to Production Pilot</span></div>
+        <div>${dateStr}</div>
+      </div>
+      <div class="prop-eyebrow">Scope breakdown by workstream</div>
+      <h1 class="prop-title">Planit AI Agent - POC to Production Pilot</h1>
+      <div class="prop-preset">${presetLabel} | Chat surface: ${chatSurfaceLabel}</div>
+      <div class="prop-assumption">${BASELINE_ASSUMPTION}</div>
+
+      <div class="prop-numbers">
+        <div><span class="prop-num-label">Hours</span><span class="prop-num-val">${t.workingHrs}</span></div>
+        <div><span class="prop-num-label">Subtotal</span><span class="prop-num-val">$${t.subtotal.toLocaleString()}</span></div>
+        <div><span class="prop-num-label">AWS funding</span><span class="prop-num-val">−$${DISCOUNT.toLocaleString()}</span></div>
+        <div class="prop-num-total"><span class="prop-num-label">Total</span><span class="prop-num-val">$${Math.abs(t.net).toLocaleString()}</span></div>
+      </div>
+
+      <h2 class="prop-section-title">Selected scope</h2>
+  `;
+
+  sections.forEach(sec => {
+    const meta = SECTION_META[sec];
+    const sectionItems = selected.filter(i => i.section === sec);
+    const secHrs = sectionItems.reduce((s, i) => s + i.hours, 0);
+    html += `<div class="prop-section">
+      <div class="prop-section-head">
+        <span class="prop-section-name">${sec}</span>
+        <span class="prop-section-hrs">${secHrs}h</span>
+      </div>
+      <p class="prop-section-desc">${meta.description}</p>
+      <ul class="prop-items">`;
+    sectionItems.forEach(i => {
+      html += `<li><span>${i.name}</span><span class="prop-item-hrs">${i.hours}h</span></li>`;
+    });
+    html += `</ul></div>`;
+  });
+
+  html += `
+      <div class="prop-foot">
+        <div>Live configurator: <a href="${DASHBOARD_URL}">${DASHBOARD_URL}</a></div>
+        <div class="prop-disclaimer">AWS funding contingent on customer approval. Pricing valid 30 days.</div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('proposal-doc').innerHTML = html;
+}
+
+document.getElementById('export-pdf').addEventListener('click', () => {
+  if (state.selected.size === 0) return;
+  buildProposalDoc();
+  setTimeout(() => window.print(), 50);
+});
+
+document.getElementById('export-xlsx').addEventListener('click', () => {
+  if (state.selected.size === 0) return;
+  const selected = [...state.selected].map(i => ITEMS[i]);
+  const workingHrs = selected.reduce((s, i) => s + i.hours, 0);
+  const t = calcTotals(workingHrs);
+  const presetLabel = state.preset ? PRESETS[state.preset].label : 'Custom selection';
+  const chatSurfaceLabel = getChatSurfaceLabel();
+  const sections = Object.keys(SECTION_META).filter(section => selected.some(i => i.section === section));
+  const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  const data = [
+    ['Planit AI Agent - POC to Production Pilot'],
+    [presetLabel],
+    ['Chat surface', chatSurfaceLabel],
+    ['Baseline assumption', BASELINE_ASSUMPTION],
+    [dateStr],
+    [],
+    ['Selected scope by workstream'],
+  ];
+  sections.forEach(sec => {
+    data.push([sec, SECTION_META[sec].description]);
+    selected.filter(i => i.section === sec).forEach(i => {
+      const tierLabel = i.label === 'must'
+        ? 'Must-Have'
+        : i.label === 'preset'
+          ? 'Nice-to-Have (preset)'
+          : i.label === 'optional'
+            ? 'Nice-to-Have (optional)'
+            : 'Advanced';
+      data.push(['  ' + i.name, tierLabel, i.hours, i.recommendation]);
+    });
+  });
+  data.push([]);
+  data.push(['Hours', '', t.workingHrs]);
+  data.push(['Subtotal', '', t.subtotal]);
+  data.push(['AWS funding', '', -DISCOUNT]);
+  data.push(['Total', '', t.net]);
+  data.push([]);
+  data.push(['Live configurator', DASHBOARD_URL]);
+
+  const sheet = XLSX.utils.aoa_to_sheet(data);
+  sheet['!cols'] = [{ wch: 42 }, { wch: 26 }, { wch: 14 }, { wch: 72 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, sheet, 'Scope');
+  const safe = presetLabel.replace(/[^a-zA-Z0-9]+/g, '_').toLowerCase();
+  XLSX.writeFile(wb, `planit_scope_${safe}_${new Date().toISOString().slice(0,10)}.xlsx`);
+});
+
+document.getElementById('gen-date').textContent = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+updateTierPrices();
+applyPreset('steering');
+</script>
+</body>
+</html>

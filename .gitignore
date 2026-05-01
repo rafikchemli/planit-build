@@ -1,0 +1,4 @@
+.playwright-mcp/
+.context
+*.docx
+*.xlsx
